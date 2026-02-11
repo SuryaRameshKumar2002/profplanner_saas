@@ -1,16 +1,37 @@
 <?php
 require 'config.php';
-require_role('werkgever');
+require_any_role(['werkgever', 'super_admin']);
 include 'templates/header.php';
 
 $action = $_GET['action'] ?? '';
+$isSuper = is_super_admin();
+$werkgeverId = current_werkgever_id();
 
-// Haal alle opdrachtgevers op
-$stmt = $db->query("SELECT * FROM opdrachtgevers ORDER BY naam ASC");
-$opdrachtgevers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($isSuper) {
+    $stmt = $db->query("
+        SELECT o.*, w.naam AS werkgever_naam
+        FROM opdrachtgevers o
+        LEFT JOIN users w ON w.id = o.werkgever_id
+        ORDER BY o.naam ASC
+    ");
+    $opdrachtgevers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $db->prepare("
+        SELECT o.*, w.naam AS werkgever_naam
+        FROM opdrachtgevers o
+        LEFT JOIN users w ON w.id = o.werkgever_id
+        WHERE o.werkgever_id = ?
+        ORDER BY o.naam ASC
+    ");
+    $stmt->execute([$werkgeverId]);
+    $opdrachtgevers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // POST: Voeg opdrachtgever toe
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_klant'])) {
+    if ($isSuper) {
+        $error = "Super admin kan hier geen klant toevoegen. Voeg toe via werkgever context.";
+    } else {
     $naam = trim($_POST['naam'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $telefoonnummer = trim($_POST['telefoonnummer'] ?? '');
@@ -21,15 +42,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_klant'])) {
     } else {
         try {
             $stmt = $db->prepare("
-                INSERT INTO opdrachtgevers (naam, email, telefoonnummer, adres) 
-                VALUES (?, ?, ?, ?)
+                INSERT INTO opdrachtgevers (werkgever_id, naam, email, telefoonnummer, adres) 
+                VALUES (?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$naam, $email, $telefoonnummer, $adres]);
+            $stmt->execute([$werkgeverId, $naam, $email, $telefoonnummer, $adres]);
             $success = "Klant '{$naam}' toegevoegd";
             header("Refresh:1");
         } catch (Exception $e) {
             $error = "Fout: " . $e->getMessage();
         }
+    }
     }
 }
 
@@ -37,8 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_klant'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_klant'])) {
     $klant_id = (int)$_POST['klant_id'];
     try {
-        $stmt = $db->prepare("DELETE FROM opdrachtgevers WHERE id = ?");
-        $stmt->execute([$klant_id]);
+        if ($isSuper) {
+            $stmt = $db->prepare("DELETE FROM opdrachtgevers WHERE id = ?");
+            $stmt->execute([$klant_id]);
+        } else {
+            $stmt = $db->prepare("DELETE FROM opdrachtgevers WHERE id = ? AND werkgever_id = ?");
+            $stmt->execute([$klant_id, $werkgeverId]);
+        }
         $success = "Klant verwijderd";
         header("Refresh:1");
     } catch (Exception $e) {
@@ -61,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_klant'])) {
 <?php endif; ?>
 
 <!-- Klant Toevoegen -->
-<?php if ($action !== 'list'): ?>
+<?php if ($action !== 'list' && !$isSuper): ?>
 <div class="card">
     <h3>+ Nieuwe Klant Toevoegen</h3>
     <form method="post">
@@ -97,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_klant'])) {
                         <th>Email</th>
                         <th>Telefoon</th>
                         <th>Adres</th>
+                        <?php if ($isSuper): ?><th>Werkgever</th><?php endif; ?>
                         <th></th>
                     </tr>
                 </thead>
@@ -107,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_klant'])) {
                         <td><?= h($og['email'] ?? '-') ?></td>
                         <td><?= h($og['telefoonnummer'] ?? '-') ?></td>
                         <td><?= h($og['adres'] ?? '-') ?></td>
+                        <?php if ($isSuper): ?><td><?= h($og['werkgever_naam'] ?? '-') ?></td><?php endif; ?>
                         <td style="text-align:right;">
                             <form method="post" style="display:inline;">
                                 <input type="hidden" name="klant_id" value="<?= (int)$og['id'] ?>">

@@ -39,6 +39,12 @@ if (($user['rol'] ?? '') === 'werknemer') {
     include 'templates/footer.php';
     exit;
   }
+} elseif (($user['rol'] ?? '') === 'werkgever') {
+  if ((int)($rooster['werkgever_id'] ?? 0) !== (int)($user['id'] ?? 0)) {
+    echo "<div class='error'>Geen toegang tot deze klus.</div>";
+    include 'templates/footer.php';
+    exit;
+  }
 }
 
 /**

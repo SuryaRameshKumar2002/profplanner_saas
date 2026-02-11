@@ -1,6 +1,6 @@
 <?php
 require 'config.php';
-require_role('werkgever');
+require_super_admin();
 include 'templates/header.php';
 ?>
 
@@ -73,12 +73,11 @@ include 'templates/header.php';
 
 <div class="card">
     <h3>🔧 Database Migratie</h3>
-    <p class="muted">Als je de 'buses' tabel nog niet hebt, voer dit uit:</p>
+    <p class="muted">Gebruik de volledige setupbestanden voor een schone installatie:</p>
     <div style="background:#fee2e2;border:1px solid #fecaca;padding:12px;border-radius:8px;margin:12px 0;font-size:13px;">
-        <strong>Stap 1:</strong> Open phpMyAdmin en selecteer je profplanner database<br>
-        <strong>Stap 2:</strong> Ga naar het 'SQL' tabblad<br>
-        <strong>Stap 3:</strong> Kopieer de inhoud van <code>db_buses_migration.sql</code><br>
-        <strong>Stap 4:</strong> Plak het SQL en voer uit
+        <strong>Stap 1:</strong> Importeer <code>database/schema.sql</code><br>
+        <strong>Stap 2:</strong> Importeer <code>database/seed_demo.sql</code> (optioneel demo data)<br>
+        <strong>Stap 3:</strong> Of voer <code>scripts/setup-local.ps1</code> uit in PowerShell
     </div>
 </div>
 

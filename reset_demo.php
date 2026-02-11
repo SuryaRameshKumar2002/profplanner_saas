@@ -1,7 +1,9 @@
 <?php
 require 'config.php';
+deny_in_production('Demo reset');
+require_super_admin();
 
-$db->exec("INSERT IGNORE INTO rollen (id, naam) VALUES (1,'werkgever'),(2,'werknemer')");
+$db->exec("INSERT IGNORE INTO rollen (id, naam) VALUES (1,'werkgever'),(2,'werknemer'),(3,'super_admin')");
 
 $hash = password_hash("123456", PASSWORD_DEFAULT);
 

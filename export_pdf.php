@@ -1,9 +1,17 @@
 <?php
 require 'config.php';
-require_role('werkgever');
+require_any_role(['werkgever', 'super_admin']);
+$isSuper = is_super_admin();
+$werkgeverId = current_werkgever_id();
 
-$stmt = $db->query("SELECT datum,tijd,titel,locatie,status FROM roosters WHERE status='afgerond' ORDER BY datum DESC");
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($isSuper) {
+  $stmt = $db->query("SELECT datum,tijd,titel,locatie,status FROM roosters WHERE status='afgerond' ORDER BY datum DESC");
+  $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+  $stmt = $db->prepare("SELECT datum,tijd,titel,locatie,status FROM roosters WHERE status='afgerond' AND werkgever_id=? ORDER BY datum DESC");
+  $stmt->execute([$werkgeverId]);
+  $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Simpele printbare HTML (klant kan "Print to PDF" gebruiken).
 header("Content-Type: text/html; charset=utf-8");

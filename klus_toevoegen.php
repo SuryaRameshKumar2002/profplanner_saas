@@ -2,6 +2,7 @@
 require 'config.php';
 require_role('werkgever');
 include 'templates/header.php';
+$werkgeverId = (int)($_SESSION['user']['id'] ?? 0);
 
 $editId = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
 $editing = $editId > 0;
@@ -19,8 +20,8 @@ $data = [
 ];
 
 if ($editing) {
-  $s = $db->prepare("SELECT * FROM roosters WHERE id=? LIMIT 1");
-  $s->execute([$editId]);
+  $s = $db->prepare("SELECT * FROM roosters WHERE id=? AND werkgever_id=? LIMIT 1");
+  $s->execute([$editId, $werkgeverId]);
   $row = $s->fetch(PDO::FETCH_ASSOC);
   if ($row) { $data = array_merge($data, $row); }
 }
@@ -30,13 +31,14 @@ $werknemers = $db->query("
   SELECT u.id, u.naam
   FROM users u
   JOIN rollen r ON r.id = u.rol_id
-  WHERE r.naam = 'werknemer'
+  WHERE r.naam = 'werknemer' AND u.werkgever_id = {$werkgeverId}
   ORDER BY u.naam
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $opdrachtgevers = $db->query("
   SELECT id, naam
   FROM opdrachtgevers
+  WHERE werkgever_id = {$werkgeverId}
   ORDER BY naam
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -45,7 +47,7 @@ try {
   $buses = $db->query("
     SELECT id, naam, kleur
     FROM buses
-    WHERE actief = TRUE
+    WHERE actief = TRUE AND werkgever_id = {$werkgeverId}
     ORDER BY naam
   ")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -67,7 +69,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-  $werkgever_id = (int)($_SESSION['user']['id'] ?? 0);
+  $werkgever_id = $werkgeverId;
 
   $datum = trim($_POST['datum'] ?? '');
   $start_in = trim($_POST['starttijd'] ?? '');

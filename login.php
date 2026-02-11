@@ -2,7 +2,7 @@
 require 'config.php';
 
 $rol = $_GET['rol'] ?? '';
-if (!in_array($rol, ['werkgever','werknemer'], true)) {
+if (!in_array($rol, ['super_admin','werkgever','werknemer'], true)) {
     header("Location: index.php");
     exit;
 }
@@ -39,9 +39,18 @@ if (isset($_POST['login'])) {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && password_verify($pass, $user['wachtwoord']) && $user['rol'] === $rol) {
+    if (
+      $user &&
+      (int)($user['actief'] ?? 1) === 1 &&
+      password_verify($pass, $user['wachtwoord']) &&
+      $user['rol'] === $rol
+    ) {
         $_SESSION['user'] = $user; // bevat 'rol'
-        header("Location: {$rol}.php");
+        if ($rol === 'super_admin') {
+          header("Location: super_admin.php");
+        } else {
+          header("Location: {$rol}.php");
+        }
         exit;
     } else {
         echo "<div class='error'>Ongeldige email, wachtwoord of verkeerde rol.</div>";

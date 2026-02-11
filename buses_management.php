@@ -1,20 +1,36 @@
 <?php
 require 'config.php';
-require_role('werkgever');
+require_any_role(['werkgever', 'super_admin']);
 include 'templates/header.php';
 
 $action = $_GET['action'] ?? '';
+$isSuper = is_super_admin();
+$werkgeverId = current_werkgever_id();
 
-// Haal alle buses op
-$stmt = $db->query("SELECT * FROM buses ORDER BY naam ASC");
-$buses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($isSuper) {
+    $stmt = $db->query("SELECT b.*, w.naam AS werkgever_naam FROM buses b LEFT JOIN users w ON w.id = b.werkgever_id ORDER BY b.naam ASC");
+    $buses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $db->prepare("SELECT b.*, w.naam AS werkgever_naam FROM buses b LEFT JOIN users w ON w.id = b.werkgever_id WHERE b.werkgever_id = ? ORDER BY b.naam ASC");
+    $stmt->execute([$werkgeverId]);
+    $buses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Haal alle werknemers op
-$stmt = $db->query("SELECT u.*, r.naam AS rol_naam FROM users u JOIN rollen r ON r.id = u.rol_id WHERE r.naam = 'werknemer' ORDER BY u.naam");
-$werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($isSuper) {
+    $stmt = $db->query("SELECT u.*, r.naam AS rol_naam FROM users u JOIN rollen r ON r.id = u.rol_id WHERE r.naam = 'werknemer' ORDER BY u.naam");
+    $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $db->prepare("SELECT u.*, r.naam AS rol_naam FROM users u JOIN rollen r ON r.id = u.rol_id WHERE r.naam = 'werknemer' AND u.werkgever_id = ? ORDER BY u.naam");
+    $stmt->execute([$werkgeverId]);
+    $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // POST: Voeg bus toe
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_bus'])) {
+    if ($isSuper) {
+        $error = "Super admin kan hier geen bus toevoegen zonder werkgever context.";
+    } else {
     $naam = trim($_POST['naam'] ?? '');
     $omschrijving = trim($_POST['omschrijving'] ?? '');
     $kleur = $_POST['kleur'] ?? '#16a34a';
@@ -23,14 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_bus'])) {
         $error = "Bus naam is verplicht";
     } else {
         try {
-            $stmt = $db->prepare("INSERT INTO buses (naam, omschrijving, kleur) VALUES (?, ?, ?)");
-            $stmt->execute([$naam, $omschrijving, $kleur]);
+            $stmt = $db->prepare("INSERT INTO buses (werkgever_id, naam, omschrijving, kleur) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$werkgeverId, $naam, $omschrijving, $kleur]);
             $success = "Bus '{$naam}' toegevoegd";
             header("Refresh:1");
         } catch (Exception $e) {
             $error = "Fout bij toevoegen: " . $e->getMessage();
         }
-    }
+    }}
 }
 
 // POST: Werknemers aan bus toewijzen
@@ -40,13 +56,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_workers'])) {
     
     try {
         // Verwijder oude toewijzingen
+        if (!$isSuper) {
+            $chk = $db->prepare("SELECT id FROM buses WHERE id = ? AND werkgever_id = ?");
+            $chk->execute([$bus_id, $werkgeverId]);
+            if (!$chk->fetchColumn()) {
+                throw new RuntimeException("Geen toegang tot deze bus.");
+            }
+        }
+
         $stmt = $db->prepare("DELETE FROM werknemers_buses WHERE bus_id = ?");
         $stmt->execute([$bus_id]);
         
         // Voeg nieuwe toe
         $stmt = $db->prepare("INSERT INTO werknemers_buses (user_id, bus_id) VALUES (?, ?)");
         foreach ($werknemers_ids as $user_id) {
-            $stmt->execute([(int)$user_id, $bus_id]);
+            $uid = (int)$user_id;
+            if (!$isSuper) {
+                $ownStmt = $db->prepare("SELECT id FROM users WHERE id = ? AND werkgever_id = ?");
+                $ownStmt->execute([$uid, $werkgeverId]);
+                if (!$ownStmt->fetchColumn()) {
+                    continue;
+                }
+            }
+            $stmt->execute([$uid, $bus_id]);
         }
         $success = "Werknemers aan bus toegewezen";
         header("Refresh:1");
@@ -59,8 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_workers'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_bus'])) {
     $bus_id = (int)$_POST['bus_id'];
     try {
-        $stmt = $db->prepare("DELETE FROM buses WHERE id = ?");
-        $stmt->execute([$bus_id]);
+        if ($isSuper) {
+            $stmt = $db->prepare("DELETE FROM buses WHERE id = ?");
+            $stmt->execute([$bus_id]);
+        } else {
+            $stmt = $db->prepare("DELETE FROM buses WHERE id = ? AND werkgever_id = ?");
+            $stmt->execute([$bus_id, $werkgeverId]);
+        }
         $success = "Bus verwijderd";
         header("Refresh:1");
     } catch (Exception $e) {
@@ -95,6 +132,7 @@ if (!empty($action) && $action === 'assign') {
 
 <!-- Bus Toevoegen -->
 <?php if ($action !== 'assign'): ?>
+<?php if (!$isSuper): ?>
 <div class="card">
     <h3>+ Nieuwe Bus Toevoegen</h3>
     <form method="post">
@@ -111,6 +149,7 @@ if (!empty($action) && $action === 'assign') {
     </form>
 </div>
 <?php endif; ?>
+<?php endif; ?>
 
 <!-- Buses Overzicht -->
 <div class="card">
@@ -126,6 +165,9 @@ if (!empty($action) && $action === 'assign') {
                         <h4 style="margin:0;font-size:16px;"><?= h($bus['naam']) ?></h4>
                     </div>
                     <p style="margin:8px 0 12px;font-size:13px;color:#64748b;"><?= h($bus['omschrijving'] ?? '') ?></p>
+                    <?php if ($isSuper): ?>
+                        <div class="muted">Werkgever: <?= h($bus['werkgever_naam'] ?? '-') ?></div>
+                    <?php endif; ?>
                     
                     <?php
                     // Toon werknemers in deze bus
@@ -167,6 +209,9 @@ if (!empty($action) && $action === 'assign') {
 
 <!-- Werknemers Toewijzen -->
 <?php if ($action === 'assign' && isset($_GET['bus_id'])): ?>
+    <?php if ($isSuper): ?>
+      <div class="notice">Toewijzen via deze pagina is alleen toegestaan binnen werkgever context.</div>
+    <?php else: ?>
     <?php
     $bus_id = (int)$_GET['bus_id'];
     $bus = null;
@@ -203,6 +248,7 @@ if (!empty($action) && $action === 'assign') {
             <a href="buses_management.php" class="btn ghost" style="margin-left:8px;">Annuleren</a>
         </form>
     </div>
+    <?php endif; ?>
     <?php endif; ?>
 <?php endif; ?>
 

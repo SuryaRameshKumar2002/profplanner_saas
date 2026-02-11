@@ -80,8 +80,8 @@ $my_buses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
   <div class="card">
     <h3>📸 Uploads</h3>
-    <p class="muted">Upload foto's van klussen.</p>
-    <a class="btn" href="upload.php">Upload</a>
+    <p class="muted">Upload foto's vanuit een specifieke klus.</p>
+    <a class="btn" href="roosters.php">Open Mijn Klussen</a>
   </div>
 
   <div class="card">

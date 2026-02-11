@@ -45,6 +45,11 @@ if (($user['rol'] ?? '') === 'werknemer' && (int)($r['werknemer_id'] ?? 0) !== (
   include 'templates/footer.php';
   exit;
 }
+if (($user['rol'] ?? '') === 'werkgever' && (int)($r['werkgever_id'] ?? 0) !== (int)($user['id'] ?? 0)) {
+  echo "<div class='error'>Geen toegang.</div>";
+  include 'templates/footer.php';
+  exit;
+}
 
 /**
  * Uploads ophalen

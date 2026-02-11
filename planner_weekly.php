@@ -4,6 +4,8 @@ require_login();
 include 'templates/header.php';
 
 $user = $_SESSION['user'];
+$isSuper = is_super_admin();
+$werkgeverId = current_werkgever_id();
 
 // Bepaal huidige week
 $week = isset($_GET['week']) ? (int)$_GET['week'] : 0;
@@ -38,6 +40,20 @@ if ($user['rol'] === 'werknemer') {
         ORDER BY r.bus_id, r.datum, r.tijd
     ");
     $stmt->execute([$user['id'], $monday->format('Y-m-d'), $next_monday->format('Y-m-d')]);
+} elseif ($isSuper) {
+    // Super admin: alle werkgevers
+    $stmt = $db->prepare("
+        SELECT r.*, b.naam AS bus_naam, b.kleur, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, wg.naam AS werkgever_naam
+        FROM roosters r
+        LEFT JOIN buses b ON b.id = r.bus_id
+        LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
+        LEFT JOIN users u ON u.id = r.werknemer_id
+        LEFT JOIN users wg ON wg.id = r.werkgever_id
+        WHERE DATE(r.datum) >= ? 
+        AND DATE(r.datum) < ?
+        ORDER BY r.bus_id, r.datum, r.tijd
+    ");
+    $stmt->execute([$monday->format('Y-m-d'), $next_monday->format('Y-m-d')]);
 } else {
     // Werkgever: alle klussen voor deze week
     $stmt = $db->prepare("
@@ -46,17 +62,23 @@ if ($user['rol'] === 'werknemer') {
         LEFT JOIN buses b ON b.id = r.bus_id
         LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
         LEFT JOIN users u ON u.id = r.werknemer_id
-        WHERE DATE(r.datum) >= ? 
+        WHERE r.werkgever_id = ?
+        AND DATE(r.datum) >= ? 
         AND DATE(r.datum) < ?
         ORDER BY r.bus_id, r.datum, r.tijd
     ");
-    $stmt->execute([$monday->format('Y-m-d'), $next_monday->format('Y-m-d')]);
+    $stmt->execute([$werkgeverId, $monday->format('Y-m-d'), $next_monday->format('Y-m-d')]);
 }
 $roosters = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Groepeer per bus
 $buses_planning = [];
-$stmt = $db->query("SELECT * FROM buses WHERE actief = TRUE ORDER BY naam");
+if ($isSuper) {
+    $stmt = $db->query("SELECT * FROM buses WHERE actief = TRUE ORDER BY naam");
+} else {
+    $stmt = $db->prepare("SELECT * FROM buses WHERE actief = TRUE AND werkgever_id = ? ORDER BY naam");
+    $stmt->execute([$werkgeverId]);
+}
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $bus) {
     $buses_planning[$bus['id']] = [
         'info' => $bus,
@@ -112,6 +134,9 @@ foreach ($roosters as $rooster) {
                             <th>Locatie</th>
                             <?php if ($user['rol'] === 'werkgever'): ?>
                                 <th>Werknemer</th>
+                            <?php elseif ($isSuper): ?>
+                                <th>Werknemer</th>
+                                <th>Werkgever</th>
                             <?php endif; ?>
                             <th>Status</th>
                             <th style="width:80px;"></th>
@@ -132,6 +157,9 @@ foreach ($roosters as $rooster) {
                             <td><?= h($r['locatie'] ?? '') ?></td>
                             <?php if ($user['rol'] === 'werkgever'): ?>
                                 <td><?= h($r['werknemer_naam'] ?? '-') ?></td>
+                            <?php elseif ($isSuper): ?>
+                                <td><?= h($r['werknemer_naam'] ?? '-') ?></td>
+                                <td><?= h($r['werkgever_naam'] ?? '-') ?></td>
                             <?php endif; ?>
                             <td><span class="<?= $badge_class ?>"><?= h($r['status'] ?? 'gepland') ?></span></td>
                             <td style="text-align:center;">

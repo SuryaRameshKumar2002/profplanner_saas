@@ -15,9 +15,16 @@
     </a>
     <div class="nav">
       <?php if(isset($_SESSION['user'])): ?>
-        <?php if($_SESSION['user']['rol']==='werkgever'): ?>
+        <?php if($_SESSION['user']['rol']==='super_admin'): ?>
+          <a href="super_admin.php">Super Admin</a>
+          <a href="werkgevers_management.php">Werkgevers</a>
+          <a href="sales_portal.php">CRM/Sales</a>
+          <a href="roosters.php">Alle Roosters</a>
+          <a href="settings.php">Settings</a>
+        <?php elseif($_SESSION['user']['rol']==='werkgever'): ?>
           <a href="werkgever.php">Dashboard</a>
           <a href="planner_weekly.php">Weekplanning</a>
+          <a href="sales_portal.php">CRM/Sales</a>
           <a href="roosters.php">Alle Roosters</a>
         <?php else: ?>
           <a href="werknemer.php">Dashboard</a>

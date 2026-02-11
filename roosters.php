@@ -4,6 +4,8 @@ require_login();
 include 'templates/header.php';
 
 $user = $_SESSION['user'];
+$isSuper = is_super_admin();
+$werkgeverId = current_werkgever_id();
 
 if($user['rol']==='werknemer'){
   $stmt = $db->prepare("
@@ -16,15 +18,27 @@ if($user['rol']==='werknemer'){
     ORDER BY r.datum DESC, r.tijd ASC
   ");
   $stmt->execute([$user['id']]);
-} else {
+} elseif ($isSuper) {
   $stmt = $db->query("
+    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur, wg.naam AS werkgever_naam
+    FROM roosters r
+    LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
+    LEFT JOIN users u ON u.id = r.werknemer_id
+    LEFT JOIN buses b ON b.id = r.bus_id
+    LEFT JOIN users wg ON wg.id = r.werkgever_id
+    ORDER BY r.datum DESC, r.tijd ASC
+  ");
+} else {
+  $stmt = $db->prepare("
     SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur
     FROM roosters r
     LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
     LEFT JOIN users u ON u.id = r.werknemer_id
     LEFT JOIN buses b ON b.id = r.bus_id
+    WHERE r.werkgever_id = ?
     ORDER BY r.datum DESC, r.tijd ASC
   ");
+  $stmt->execute([$werkgeverId]);
 }
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -32,7 +46,7 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <div>
       <h2>Roosters</h2>
-      <div class="muted"><?= $user['rol']==='werkgever' ? "Alle klussen" : "Jouw klussen" ?></div>
+      <div class="muted"><?= $user['rol']==='werkgever' ? "Alle klussen" : ($isSuper ? "Alle klussen (alle werkgevers)" : "Jouw klussen") ?></div>
     </div>
     <?php if($user['rol']==='werkgever'): ?>
       <a class="btn" href="klus_toevoegen.php">+ Klus aanmaken</a>
@@ -42,7 +56,7 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <table>
     <thead>
       <tr>
-        <th>Datum</th><th>Tijd</th><th>Klus</th><th>Locatie</th><th>Bus/Team</th><th>Werknemer</th><th>Status</th><th></th>
+        <th>Datum</th><th>Tijd</th><th>Klus</th><th>Locatie</th><th>Bus/Team</th><th>Werknemer</th><?php if($isSuper): ?><th>Werkgever</th><?php endif; ?><th>Status</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -66,12 +80,13 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php endif; ?>
         </td>
         <td><?= h($r['werknemer_naam'] ?? '') ?></td>
+        <?php if($isSuper): ?><td><?= h($r['werkgever_naam'] ?? '-') ?></td><?php endif; ?>
         <td><span class="<?= $badge ?>"><?= h($r['status'] ?? '') ?></span></td>
         <td><a class="btn ghost" href="rooster_detail.php?id=<?= (int)$r['id'] ?>">Open</a></td>
       </tr>
       <?php endforeach; ?>
       <?php if(!$rows): ?>
-        <tr><td colspan="7" class="muted">Geen klussen gevonden.</td></tr>
+        <tr><td colspan="<?= $isSuper ? 9 : 8 ?>" class="muted">Geen klussen gevonden.</td></tr>
       <?php endif; ?>
     </tbody>
   </table>

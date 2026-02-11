@@ -1,0 +1,3 @@
+<FilesMatch "^(reset_demo\.php|local_check\.php)$">
+    Require all denied
+</FilesMatch>

@@ -54,8 +54,8 @@
 
   <div class="card">
     <h3>⚙️ Instellingen</h3>
-    <p class="muted">Database en systeem instellingen.</p>
-    <a class="btn ghost" href="settings.php">Instellingen</a>
+    <p class="muted">Beheer je account en profielinstellingen.</p>
+    <a class="btn ghost" href="profile.php">Profiel</a>
   </div>
 </div>
 

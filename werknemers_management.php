@@ -1,16 +1,33 @@
 <?php
 require 'config.php';
-require_role('werkgever');
+require_any_role(['werkgever', 'super_admin']);
 include 'templates/header.php';
 
-// Haal alle werknemers op
-$stmt = $db->query("
-    SELECT u.*, r.naam AS rol_naam FROM users u 
-    JOIN rollen r ON r.id = u.rol_id 
-    WHERE r.naam = 'werknemer'
-    ORDER BY u.naam
-");
-$werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$isSuper = is_super_admin();
+$werkgeverId = current_werkgever_id();
+
+if ($isSuper) {
+    $stmt = $db->query("
+        SELECT u.*, r.naam AS rol_naam, wg.naam AS werkgever_naam
+        FROM users u
+        JOIN rollen r ON r.id = u.rol_id
+        LEFT JOIN users wg ON wg.id = u.werkgever_id
+        WHERE r.naam = 'werknemer'
+        ORDER BY u.naam
+    ");
+    $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $db->prepare("
+        SELECT u.*, r.naam AS rol_naam, wg.naam AS werkgever_naam
+        FROM users u
+        JOIN rollen r ON r.id = u.rol_id
+        LEFT JOIN users wg ON wg.id = u.werkgever_id
+        WHERE r.naam = 'werknemer' AND u.werkgever_id = ?
+        ORDER BY u.naam
+    ");
+    $stmt->execute([$werkgeverId]);
+    $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 
 <div class="card">
@@ -21,7 +38,9 @@ $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
         <h3>Alle Werknemers (<?= count($werknemers) ?>)</h3>
-        <a href="werknemer_toevoegen.php" class="btn">+ Werknemer Toevoegen</a>
+        <?php if (!$isSuper): ?>
+            <a href="werknemer_toevoegen.php" class="btn">+ Werknemer Toevoegen</a>
+        <?php endif; ?>
     </div>
     
     <?php if (empty($werknemers)): ?>
@@ -34,6 +53,7 @@ $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <th>Naam</th>
                         <th>Email</th>
                         <th>Telefoonnummer</th>
+                        <?php if ($isSuper): ?><th>Werkgever</th><?php endif; ?>
                         <th>Status</th>
                         <th></th>
                     </tr>
@@ -44,9 +64,12 @@ $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <td><?= h($w['naam']) ?></td>
                         <td><?= h($w['email']) ?></td>
                         <td><?= h($w['telefoonnummer'] ?? '-') ?></td>
+                        <?php if ($isSuper): ?><td><?= h($w['werkgever_naam'] ?? '-') ?></td><?php endif; ?>
                         <td><span class="badge green">Actief</span></td>
                         <td style="text-align:right;">
-                            <a href="werknemer_bewerk.php?id=<?= (int)$w['id'] ?>" class="btn ghost" style="padding:6px 8px;font-size:12px;margin:0;">Bewerk</a>
+                            <?php if (!$isSuper): ?>
+                                <a href="werknemer_bewerk.php?id=<?= (int)$w['id'] ?>" class="btn ghost" style="padding:6px 8px;font-size:12px;margin:0;">Bewerk</a>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
