@@ -7,20 +7,22 @@ $user = $_SESSION['user'];
 
 if($user['rol']==='werknemer'){
   $stmt = $db->prepare("
-    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam
+    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur
     FROM roosters r
     LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
     LEFT JOIN users u ON u.id = r.werknemer_id
+    LEFT JOIN buses b ON b.id = r.bus_id
     WHERE r.werknemer_id = ?
     ORDER BY r.datum DESC, r.tijd ASC
   ");
   $stmt->execute([$user['id']]);
 } else {
   $stmt = $db->query("
-    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam
+    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur
     FROM roosters r
     LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
     LEFT JOIN users u ON u.id = r.werknemer_id
+    LEFT JOIN buses b ON b.id = r.bus_id
     ORDER BY r.datum DESC, r.tijd ASC
   ");
 }
@@ -40,7 +42,7 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <table>
     <thead>
       <tr>
-        <th>Datum</th><th>Tijd</th><th>Klus</th><th>Locatie</th><th>Werknemer</th><th>Status</th><th></th>
+        <th>Datum</th><th>Tijd</th><th>Klus</th><th>Locatie</th><th>Bus/Team</th><th>Werknemer</th><th>Status</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -56,6 +58,13 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <td><?= h($r['tijd']) ?></td>
         <td><?= h($r['titel'] ?? '') ?></td>
         <td><?= h($r['locatie'] ?? '') ?></td>
+        <td>
+          <?php if (!empty($r['bus_naam'])): ?>
+            <span class="badge" style="background:<?= h($r['bus_kleur'] ?? '#16a34a') ?>;color:#fff;"><?= h($r['bus_naam']) ?></span>
+          <?php else: ?>
+            <span class="muted">-</span>
+          <?php endif; ?>
+        </td>
         <td><?= h($r['werknemer_naam'] ?? '') ?></td>
         <td><span class="<?= $badge ?>"><?= h($r['status'] ?? '') ?></span></td>
         <td><a class="btn ghost" href="rooster_detail.php?id=<?= (int)$r['id'] ?>">Open</a></td>
