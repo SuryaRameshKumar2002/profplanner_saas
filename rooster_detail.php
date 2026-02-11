@@ -16,10 +16,13 @@ if ($id <= 0) {
 $stmt = $db->prepare("
   SELECT r.*,
          o.naam AS opdrachtgever_naam,
-         u.naam AS werknemer_naam
+         u.naam AS werknemer_naam,
+         b.naam AS bus_naam,
+         b.kleur AS bus_kleur
   FROM roosters r
   LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
   LEFT JOIN users u ON u.id = r.werknemer_id
+  LEFT JOIN buses b ON b.id = r.bus_id
   WHERE r.id = ?
   LIMIT 1
 ");
@@ -93,6 +96,9 @@ if (strlen($eindRaw)  >= 16 && strpos($eindRaw,  ' ') !== false) $eindTijd  = su
     <p><b>Locatie:</b> <?= h($r['locatie'] ?? '') ?></p>
     <p><b>Opdrachtgever:</b> <?= h($r['opdrachtgever_naam'] ?? '') ?></p>
     <p><b>Werknemer:</b> <?= h($r['werknemer_naam'] ?? '') ?></p>
+    <?php if (!empty($r['bus_naam'])): ?>
+      <p><b>Bus/Team:</b> <span class="badge" style="background:<?= h($r['bus_kleur'] ?? '#16a34a') ?>;color:#fff;"><?= h($r['bus_naam']) ?></span></p>
+    <?php endif; ?>
 
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">
 

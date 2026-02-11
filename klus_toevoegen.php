@@ -15,6 +15,7 @@ $data = [
   'omschrijving' => '',
   'werknemer_id' => '',
   'opdrachtgever_id' => '',
+  'bus_id' => '',
 ];
 
 if ($editing) {
@@ -38,6 +39,18 @@ $opdrachtgevers = $db->query("
   FROM opdrachtgevers
   ORDER BY naam
 ")->fetchAll(PDO::FETCH_ASSOC);
+
+$buses = [];
+try {
+  $buses = $db->query("
+    SELECT id, naam, kleur
+    FROM buses
+    WHERE actief = TRUE
+    ORDER BY naam
+  ")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+  // buses table doesn't exist yet
+}
 
 /**
  * Detecteer kolomtypes van starttijd/eindtijd (TIME vs DATETIME)
@@ -77,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $_POST['omschrijving'] ?? '',
       (int)($_POST['werknemer_id'] ?? 0),
       (int)($_POST['opdrachtgever_id'] ?? 0),
+      (int)($_POST['bus_id'] ?? 0) ?: null,
       $werkgever_id
     ];
 
@@ -91,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             omschrijving=?,
             werknemer_id=?,
             opdrachtgever_id=?,
+            bus_id=?,
             werkgever_id=?
         WHERE id=?
       ");
@@ -99,9 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $stmt = $db->prepare("
         INSERT INTO roosters (
           datum, starttijd, eindtijd, titel, locatie, omschrijving,
-          werknemer_id, opdrachtgever_id, werkgever_id, status
+          werknemer_id, opdrachtgever_id, bus_id, werkgever_id, status
         )
-        VALUES (?,?,?,?,?,?,?,?,?, 'gepland')
+        VALUES (?,?,?,?,?,?,?,?,?,?, 'gepland')
       ");
       $stmt->execute($payload);
       $editId = (int)$db->lastInsertId();
@@ -168,6 +183,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php foreach ($opdrachtgevers as $o): ?>
             <option value="<?= (int)$o['id'] ?>" <?= ((int)$data['opdrachtgever_id'] === (int)$o['id'] ? 'selected' : '') ?>>
               <?= h($o['naam']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div>
+        <label>Bus / Team (optioneel)</label>
+        <select name="bus_id">
+          <option value="">Geen bus</option>
+          <?php foreach ($buses as $b): ?>
+            <option value="<?= (int)$b['id'] ?>" <?= ((int)$data['bus_id'] === (int)$b['id'] ? 'selected' : '') ?>>
+              <?= h($b['naam']) ?>
             </option>
           <?php endforeach; ?>
         </select>
