@@ -18,7 +18,7 @@ function table_exists(PDO $db, string $table): bool {
   return (bool)$stmt->fetchColumn();
 }
 
-$db->exec("INSERT INTO rollen (id, naam) VALUES (3, 'super_admin') ON DUPLICATE KEY UPDATE naam=VALUES(naam)");
+$db->exec("INSERT INTO rollen (id, naam) VALUES (3, 'super_admin'), (4, 'sales_manager'), (5, 'sales_agent') ON DUPLICATE KEY UPDATE naam=VALUES(naam)");
 
 if (!col_exists($db, 'users', 'werkgever_id')) {
   $db->exec("ALTER TABLE users ADD COLUMN werkgever_id INT NULL AFTER rol_id");
@@ -38,15 +38,81 @@ if (!table_exists($db, 'sales_leads')) {
   $db->exec("CREATE TABLE sales_leads (
     id INT AUTO_INCREMENT PRIMARY KEY,
     werkgever_id INT NULL,
+    sales_user_id INT NULL,
     opdrachtgever_id INT NULL,
-    titel VARCHAR(190) NOT NULL,
-    contact_persoon VARCHAR(190) NULL,
-    contact_email VARCHAR(190) NULL,
-    contact_telefoon VARCHAR(30) NULL,
-    gewenste_datum DATE NULL,
+    gemeente VARCHAR(120) NOT NULL DEFAULT '',
+    straatnaam VARCHAR(190) NOT NULL DEFAULT '',
+    huisnummer VARCHAR(30) NOT NULL DEFAULT '',
+    voornaam VARCHAR(120) NOT NULL DEFAULT '',
+    achternaam VARCHAR(120) NOT NULL DEFAULT '',
+    telefoonnummer VARCHAR(30) NULL,
+    email VARCHAR(190) NULL,
+    bereikbaar_via VARCHAR(80) NULL,
+    afspraak_datum DATETIME NULL,
+    adviesgesprek_gepland BOOLEAN NOT NULL DEFAULT FALSE,
+    titel VARCHAR(190) NOT NULL DEFAULT 'Nieuwe lead',
     notities TEXT NULL,
     status VARCHAR(40) NOT NULL DEFAULT 'nieuw',
     bevestigd_rooster_id INT NULL,
+    gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+$salesLeadCols = [
+  "sales_user_id INT NULL AFTER werkgever_id",
+  "gemeente VARCHAR(120) NOT NULL DEFAULT '' AFTER opdrachtgever_id",
+  "straatnaam VARCHAR(190) NOT NULL DEFAULT '' AFTER gemeente",
+  "huisnummer VARCHAR(30) NOT NULL DEFAULT '' AFTER straatnaam",
+  "voornaam VARCHAR(120) NOT NULL DEFAULT '' AFTER huisnummer",
+  "achternaam VARCHAR(120) NOT NULL DEFAULT '' AFTER voornaam",
+  "telefoonnummer VARCHAR(30) NULL AFTER achternaam",
+  "email VARCHAR(190) NULL AFTER telefoonnummer",
+  "bereikbaar_via VARCHAR(80) NULL AFTER email",
+  "afspraak_datum DATETIME NULL AFTER bereikbaar_via",
+  "adviesgesprek_gepland BOOLEAN NOT NULL DEFAULT FALSE AFTER afspraak_datum"
+];
+foreach ($salesLeadCols as $colDef) {
+  $parts = explode(' ', trim($colDef), 2);
+  $colName = $parts[0];
+  if (!col_exists($db, 'sales_leads', $colName)) {
+    $db->exec("ALTER TABLE sales_leads ADD COLUMN {$colDef}");
+  }
+}
+
+if (!table_exists($db, 'sales_appointments')) {
+  $db->exec("CREATE TABLE sales_appointments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    werkgever_id INT NULL,
+    sales_user_id INT NULL,
+    lead_id INT NULL,
+    gemeente VARCHAR(120) NOT NULL,
+    straatnaam VARCHAR(190) NOT NULL,
+    huisnummer VARCHAR(30) NOT NULL,
+    klant_achternaam VARCHAR(120) NOT NULL,
+    email VARCHAR(190) NULL,
+    telefoonnummer VARCHAR(30) NULL,
+    afspraak_datum DATETIME NOT NULL,
+    bijzonderheden TEXT NULL,
+    status VARCHAR(40) NOT NULL DEFAULT 'gepland',
+    gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+if (!table_exists($db, 'sales_planning_visits')) {
+  $db->exec("CREATE TABLE sales_planning_visits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    werkgever_id INT NULL,
+    sales_user_id INT NULL,
+    lead_id INT NULL,
+    gemeente VARCHAR(120) NOT NULL,
+    straatnaam VARCHAR(190) NOT NULL,
+    huisnummer VARCHAR(30) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'GEPLAND',
+    gepland_op DATE NULL,
+    bezocht_op DATETIME NULL,
+    notities TEXT NULL,
     gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -75,5 +141,16 @@ $defaultWerkgeverId = (int)$db->query("SELECT id FROM users WHERE rol_id = {$wer
 if ($defaultWerkgeverId > 0) {
   $db->exec("UPDATE users SET werkgever_id = {$defaultWerkgeverId} WHERE rol_id = {$werknemerRole} AND (werkgever_id IS NULL OR werkgever_id = 0)");
 }
+
+$salesManagerRole = (int)$db->query("SELECT id FROM rollen WHERE naam='sales_manager' LIMIT 1")->fetchColumn();
+$salesAgentRole = (int)$db->query("SELECT id FROM rollen WHERE naam='sales_agent' LIMIT 1")->fetchColumn();
+
+$salesManagerHash = password_hash('password123', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Sales Manager Test','salesmanager@test.nl',?,?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
+$stmt->execute([$salesManagerHash, $salesManagerRole, ($defaultWerkgeverId > 0 ? $defaultWerkgeverId : null)]);
+
+$salesAgentHash = password_hash('password123', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Sales Medewerker Test','sales@test.nl',?,?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
+$stmt->execute([$salesAgentHash, $salesAgentRole, ($defaultWerkgeverId > 0 ? $defaultWerkgeverId : null)]);
 
 echo "Super admin migration complete\n";

@@ -32,6 +32,26 @@ ON DUPLICATE KEY UPDATE
   telefoonnummer = VALUES(telefoonnummer),
   actief = TRUE;
 
+INSERT INTO users (naam, email, wachtwoord, rol_id, werkgever_id, telefoonnummer, actief)
+VALUES ('Sales Manager Test', 'salesmanager@test.nl', @pw, 4, @werkgever_id, '+31 6 44444444', TRUE)
+ON DUPLICATE KEY UPDATE
+  naam = VALUES(naam),
+  wachtwoord = VALUES(wachtwoord),
+  rol_id = VALUES(rol_id),
+  werkgever_id = VALUES(werkgever_id),
+  telefoonnummer = VALUES(telefoonnummer),
+  actief = TRUE;
+
+INSERT INTO users (naam, email, wachtwoord, rol_id, werkgever_id, telefoonnummer, actief)
+VALUES ('Sales Medewerker Test', 'sales@test.nl', @pw, 5, @werkgever_id, '+31 6 55555555', TRUE)
+ON DUPLICATE KEY UPDATE
+  naam = VALUES(naam),
+  wachtwoord = VALUES(wachtwoord),
+  rol_id = VALUES(rol_id),
+  werkgever_id = VALUES(werkgever_id),
+  telefoonnummer = VALUES(telefoonnummer),
+  actief = TRUE;
+
 INSERT INTO opdrachtgevers (werkgever_id, naam, email, telefoonnummer, adres)
 VALUES (@werkgever_id, 'Demo Opdrachtgever BV', 'planning@demo-opdrachtgever.nl', '+31 20 123 4567', 'Demo Straat 1, Amsterdam')
 ON DUPLICATE KEY UPDATE
@@ -85,13 +105,37 @@ WHERE @werknemer_id IS NOT NULL
       AND werknemer_id = @werknemer_id
   );
 
+SET @sales_manager_id := (SELECT id FROM users WHERE email = 'salesmanager@test.nl' LIMIT 1);
+
 INSERT INTO sales_leads (
-  werkgever_id, opdrachtgever_id, titel, contact_persoon, contact_email, contact_telefoon, gewenste_datum, notities, status
+  werkgever_id, sales_user_id, opdrachtgever_id, gemeente, straatnaam, huisnummer, voornaam, achternaam, telefoonnummer, email, bereikbaar_via, afspraak_datum, adviesgesprek_gepland, titel, notities, status
 )
 SELECT
-  @werkgever_id, @opdrachtgever_id, 'Dakisolatie offerteaanvraag', 'Jan de Vries', 'jan@demo-opdrachtgever.nl', '+31 6 33333333', DATE_ADD(CURDATE(), INTERVAL 3 DAY), 'Nieuwe lead vanuit saleskanaal.', 'nieuw'
+  @werkgever_id, @sales_manager_id, @opdrachtgever_id, 'Amsterdam', 'Keizersgracht', '100', 'Jan', 'de Vries', '+31 6 33333333', 'jan@demo-opdrachtgever.nl', 'telefoon', DATE_ADD(NOW(), INTERVAL 2 DAY), TRUE, 'Dakisolatie offerteaanvraag', 'Nieuwe lead vanuit saleskanaal.', 'nieuw'
 WHERE NOT EXISTS (
   SELECT 1 FROM sales_leads
   WHERE titel = 'Dakisolatie offerteaanvraag'
     AND werkgever_id = @werkgever_id
 );
+
+SET @lead_id := (SELECT id FROM sales_leads WHERE werkgever_id = @werkgever_id AND titel = 'Dakisolatie offerteaanvraag' LIMIT 1);
+
+INSERT INTO sales_appointments (
+  werkgever_id, sales_user_id, lead_id, gemeente, straatnaam, huisnummer, klant_achternaam, email, telefoonnummer, afspraak_datum, bijzonderheden, status
+)
+SELECT
+  @werkgever_id, @sales_manager_id, @lead_id, 'Amsterdam', 'Keizersgracht', '100', 'de Vries', 'jan@demo-opdrachtgever.nl', '+31 6 33333333', DATE_ADD(NOW(), INTERVAL 2 DAY), 'Adviesgesprek isolatie', 'gepland'
+WHERE @lead_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM sales_appointments WHERE lead_id = @lead_id
+  );
+
+INSERT INTO sales_planning_visits (
+  werkgever_id, sales_user_id, lead_id, gemeente, straatnaam, huisnummer, status, gepland_op, notities
+)
+SELECT
+  @werkgever_id, @sales_manager_id, @lead_id, 'Amsterdam', 'Keizersgracht', '100', 'BEZOCHT INTERESSE', CURDATE(), 'Klant toont interesse in pakket A.'
+WHERE @lead_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM sales_planning_visits WHERE lead_id = @lead_id
+  );

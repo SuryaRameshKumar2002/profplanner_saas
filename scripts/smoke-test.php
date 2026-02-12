@@ -17,6 +17,8 @@ $requiredTables = [
   'afwezigheden',
   'uploads',
   'sales_leads',
+  'sales_appointments',
+  'sales_planning_visits',
   'audit_logs'
 ];
 
@@ -38,9 +40,13 @@ $users = (int)$db->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $jobs = (int)$db->query("SELECT COUNT(*) FROM roosters")->fetchColumn();
 $buses = (int)$db->query("SELECT COUNT(*) FROM buses")->fetchColumn();
 $leads = (int)$db->query("SELECT COUNT(*) FROM sales_leads")->fetchColumn();
+$appointments = (int)$db->query("SELECT COUNT(*) FROM sales_appointments")->fetchColumn();
+$visits = (int)$db->query("SELECT COUNT(*) FROM sales_planning_visits")->fetchColumn();
 
 echo "Schema OK\n";
 echo "Users: $users\n";
 echo "Roosters: $jobs\n";
 echo "Buses: $buses\n";
 echo "Leads: $leads\n";
+echo "Appointments: $appointments\n";
+echo "Planning visits: $visits\n";

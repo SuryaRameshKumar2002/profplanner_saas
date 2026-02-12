@@ -25,6 +25,18 @@ header.top{
   padding:18px 22px;
   box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
+.brand-link{
+  display:inline-flex;
+  flex-direction:column;
+  gap:4px;
+  text-decoration:none;
+  color:inherit;
+}
+.brand-logo{
+  height:34px;
+  width:auto;
+  display:block;
+}
 
 .container{
   max-width:1100px;
@@ -102,6 +114,26 @@ header.top{
   border:1px solid var(--border-color);
 }
 .btn.ghost:hover{background:var(--grey-light);border-color:var(--primary-green)}
+.btn.subtle{
+  background:transparent;
+  color:#64748b;
+  border:1px solid #cbd5e1;
+  padding:6px 10px;
+  font-size:12px;
+}
+.btn.subtle:hover{
+  background:#f8fafc;
+  color:#475569;
+  border-color:#94a3b8;
+  box-shadow:none;
+  transform:none;
+}
+.login-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
 
 /* Forms */
 input,select,textarea{
@@ -213,6 +245,8 @@ tr:hover{background:var(--grey-light)}
   .nav{flex-direction:column}
   .nav a{width:100%;text-align:center}
   .btn{width:100%;text-align:center}
+  .btn.subtle{width:auto}
+  .brand-logo{height:30px}
   table{font-size:12px}
   th,td{padding:8px}
 }

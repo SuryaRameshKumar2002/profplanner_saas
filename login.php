@@ -2,7 +2,7 @@
 require 'config.php';
 
 $rol = $_GET['rol'] ?? '';
-if (!in_array($rol, ['super_admin','werkgever','werknemer'], true)) {
+if (!in_array($rol, ['super_admin','werkgever','werknemer','sales'], true)) {
     header("Location: index.php");
     exit;
 }
@@ -39,15 +39,21 @@ if (isset($_POST['login'])) {
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    $isSalesRoleMatch = ($rol === 'sales' && in_array(($user['rol'] ?? ''), ['sales_manager', 'sales_agent'], true));
+    $isExactRoleMatch = ($rol !== 'sales' && ($user['rol'] ?? '') === $rol);
+
     if (
       $user &&
       (int)($user['actief'] ?? 1) === 1 &&
       password_verify($pass, $user['wachtwoord']) &&
-      $user['rol'] === $rol
+      ($isExactRoleMatch || $isSalesRoleMatch)
     ) {
+        session_regenerate_id(true);
         $_SESSION['user'] = $user; // bevat 'rol'
         if ($rol === 'super_admin') {
           header("Location: super_admin.php");
+        } elseif ($rol === 'sales') {
+          header("Location: sales_dashboard.php");
         } else {
           header("Location: {$rol}.php");
         }

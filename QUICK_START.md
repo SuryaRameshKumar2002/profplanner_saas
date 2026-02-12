@@ -30,6 +30,8 @@ If your XAMPP Apache uses port 8080, use:
 - Super Admin: `admin@profplanner.local` / `password123`
 - Werkgever: `werkgever@test.nl` / `password123`
 - Werknemer: `werknemer@test.nl` / `password123`
+- Sales Manager: `salesmanager@test.nl` / `password123`
+- Sales Medewerker: `sales@test.nl` / `password123`
 
 ## 3. Smoke test (optional)
 
@@ -64,7 +66,7 @@ If script is blocked, import in phpMyAdmin:
 2. Open `Werknemers` and verify add/edit works.
 3. Open `Bus & Team Beheer` and assign werknemer to `HV01`.
 4. Create a job via `+ Klus aanmaken`.
-5. Open `CRM/Sales`, add a lead, and confirm lead to job.
+5. Open `Sales`, voeg lead + afspraak toe, en bevestig lead naar job.
 6. Login as werknemer and open `Mijn Roosters`.
 7. Open job, update status, upload photo.
 8. Login as werkgever and verify status/upload in detail page.

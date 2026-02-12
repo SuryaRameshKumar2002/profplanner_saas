@@ -7,7 +7,8 @@ ProfPlanner is a PHP + MySQL portal for sales-confirmed job planning and executi
 - Super Admin dashboard and werkgever management
 - Employer dashboard (`werkgever`)
 - Employee dashboard (`werknemer`)
-- CRM/Sales leads portal with confirm-to-job flow
+- Sales dashboard (`sales_manager`, `sales_agent`)
+- CRM/Sales leads + agenda + planning + confirm-to-job flow
 - Jobs/roosters CRUD
 - Weekly planning grouped by bus/team (`HV01`, `HV02`, ...)
 - Client and employee management
@@ -38,6 +39,8 @@ Follow `QUICK_START.md`.
 - `admin@profplanner.local` / `password123`
 - `werkgever@test.nl` / `password123`
 - `werknemer@test.nl` / `password123`
+- `salesmanager@test.nl` / `password123`
+- `sales@test.nl` / `password123`
 
 ## Environment variables
 

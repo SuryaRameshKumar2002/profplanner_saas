@@ -34,4 +34,6 @@ echo Login:
 echo   admin@profplanner.local / password123
 echo   werkgever@test.nl / password123
 echo   werknemer@test.nl / password123
+echo   salesmanager@test.nl / password123
+echo   sales@test.nl / password123
 endlocal

@@ -1,4 +1,5 @@
 <?php
+ini_set('session.use_strict_mode', '1');
 session_start();
 
 /**
@@ -80,6 +81,19 @@ function is_werknemer(): bool {
   return (current_user()['rol'] ?? '') === 'werknemer';
 }
 
+function is_sales_manager(): bool {
+  return (current_user()['rol'] ?? '') === 'sales_manager';
+}
+
+function is_sales_agent(): bool {
+  return (current_user()['rol'] ?? '') === 'sales_agent';
+}
+
+function is_sales_user(): bool {
+  $rol = current_user()['rol'] ?? '';
+  return in_array($rol, ['sales_manager', 'sales_agent'], true);
+}
+
 /**
  * Werkgever context voor datascoping.
  * - werkgever: eigen user id
@@ -92,10 +106,18 @@ function current_werkgever_id(): ?int {
   if ($rol === 'werkgever') {
     return (int)$user['id'];
   }
-  if ($rol === 'werknemer' && isset($user['werkgever_id'])) {
+  if (in_array($rol, ['werknemer', 'sales_manager', 'sales_agent'], true) && isset($user['werkgever_id'])) {
     return (int)$user['werkgever_id'];
   }
   return null;
+}
+
+function require_sales_access(): void {
+  require_any_role(['super_admin', 'sales_manager', 'sales_agent', 'werkgever']);
+}
+
+function can_manage_sales_users(): bool {
+  return is_super_admin() || is_sales_manager() || is_werkgever();
 }
 
 /**

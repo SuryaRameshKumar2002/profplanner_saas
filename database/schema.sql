@@ -130,24 +130,87 @@ CREATE TABLE IF NOT EXISTS uploads (
 CREATE TABLE IF NOT EXISTS sales_leads (
   id INT AUTO_INCREMENT PRIMARY KEY,
   werkgever_id INT NULL,
+  sales_user_id INT NULL,
   opdrachtgever_id INT NULL,
-  titel VARCHAR(190) NOT NULL,
-  contact_persoon VARCHAR(190) NULL,
-  contact_email VARCHAR(190) NULL,
-  contact_telefoon VARCHAR(30) NULL,
-  gewenste_datum DATE NULL,
+  gemeente VARCHAR(120) NOT NULL,
+  straatnaam VARCHAR(190) NOT NULL,
+  huisnummer VARCHAR(30) NOT NULL,
+  voornaam VARCHAR(120) NOT NULL,
+  achternaam VARCHAR(120) NOT NULL,
+  telefoonnummer VARCHAR(30) NULL,
+  email VARCHAR(190) NULL,
+  bereikbaar_via VARCHAR(80) NULL,
+  afspraak_datum DATETIME NULL,
+  adviesgesprek_gepland BOOLEAN NOT NULL DEFAULT FALSE,
+  titel VARCHAR(190) NOT NULL DEFAULT 'Nieuwe lead',
   notities TEXT NULL,
   status VARCHAR(40) NOT NULL DEFAULT 'nieuw',
   bevestigd_rooster_id INT NULL,
   gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_sales_werkgever (werkgever_id),
+  INDEX idx_sales_user (sales_user_id),
   INDEX idx_sales_status (status),
   CONSTRAINT fk_sales_werkgever FOREIGN KEY (werkgever_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_sales_user FOREIGN KEY (sales_user_id) REFERENCES users(id)
     ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_sales_opdrachtgever FOREIGN KEY (opdrachtgever_id) REFERENCES opdrachtgevers(id)
     ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_sales_rooster FOREIGN KEY (bevestigd_rooster_id) REFERENCES roosters(id)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sales_appointments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  werkgever_id INT NULL,
+  sales_user_id INT NULL,
+  lead_id INT NULL,
+  gemeente VARCHAR(120) NOT NULL,
+  straatnaam VARCHAR(190) NOT NULL,
+  huisnummer VARCHAR(30) NOT NULL,
+  klant_achternaam VARCHAR(120) NOT NULL,
+  email VARCHAR(190) NULL,
+  telefoonnummer VARCHAR(30) NULL,
+  afspraak_datum DATETIME NOT NULL,
+  bijzonderheden TEXT NULL,
+  status VARCHAR(40) NOT NULL DEFAULT 'gepland',
+  gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_sales_appt_werkgever (werkgever_id),
+  INDEX idx_sales_appt_user (sales_user_id),
+  INDEX idx_sales_appt_date (afspraak_datum),
+  CONSTRAINT fk_sales_appt_werkgever FOREIGN KEY (werkgever_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_sales_appt_user FOREIGN KEY (sales_user_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_sales_appt_lead FOREIGN KEY (lead_id) REFERENCES sales_leads(id)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sales_planning_visits (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  werkgever_id INT NULL,
+  sales_user_id INT NULL,
+  lead_id INT NULL,
+  gemeente VARCHAR(120) NOT NULL,
+  straatnaam VARCHAR(190) NOT NULL,
+  huisnummer VARCHAR(30) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'GEPLAND',
+  gepland_op DATE NULL,
+  bezocht_op DATETIME NULL,
+  notities TEXT NULL,
+  gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_sales_plan_werkgever (werkgever_id),
+  INDEX idx_sales_plan_user (sales_user_id),
+  INDEX idx_sales_plan_gemeente (gemeente),
+  INDEX idx_sales_plan_status (status),
+  CONSTRAINT fk_sales_plan_werkgever FOREIGN KEY (werkgever_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_sales_plan_user FOREIGN KEY (sales_user_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_sales_plan_lead FOREIGN KEY (lead_id) REFERENCES sales_leads(id)
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -168,5 +231,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 INSERT INTO rollen (id, naam) VALUES
   (1, 'werkgever'),
   (2, 'werknemer'),
-  (3, 'super_admin')
+  (3, 'super_admin'),
+  (4, 'sales_manager'),
+  (5, 'sales_agent')
 ON DUPLICATE KEY UPDATE naam = VALUES(naam);
