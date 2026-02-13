@@ -120,6 +120,56 @@ function can_manage_sales_users(): bool {
   return is_super_admin() || is_sales_manager() || is_werkgever();
 }
 
+function create_notification(PDO $db, ?int $senderUserId, int $recipientUserId, string $type, string $title, ?string $message = null, ?string $link = null): void {
+  try {
+    $stmt = $db->prepare("
+      INSERT INTO notifications (sender_user_id, recipient_user_id, type, title, message, link)
+      VALUES (?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->execute([$senderUserId, $recipientUserId, $type, $title, $message, $link]);
+  } catch (Throwable $e) {
+    // Notifications should not break the main flow.
+  }
+}
+
+function notify_for_scope(PDO $db, string $type, string $title, ?string $message, ?string $link, array $options = []): void {
+  $currentUser = current_user();
+  $senderId = isset($currentUser['id']) ? (int)$currentUser['id'] : null;
+  $werkgeverId = $options['werkgever_id'] ?? current_werkgever_id();
+  $includeCurrent = (bool)($options['include_current_user'] ?? false);
+  $roles = $options['roles'] ?? ['werkgever', 'werknemer', 'sales_manager', 'sales_agent'];
+  $extraRecipients = $options['recipient_ids'] ?? [];
+
+  $recipientIds = [];
+  if ($werkgeverId !== null) {
+    $rolePlaceholders = implode(',', array_fill(0, count($roles), '?'));
+    $params = array_merge([$werkgeverId], $roles);
+    $stmt = $db->prepare("
+      SELECT u.id
+      FROM users u
+      JOIN rollen r ON r.id = u.rol_id
+      WHERE u.actief = TRUE
+        AND (u.werkgever_id = ? OR u.id = ?)
+        AND r.naam IN ($rolePlaceholders)
+    ");
+    array_splice($params, 1, 0, [$werkgeverId]);
+    $stmt->execute($params);
+    $recipientIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+  }
+
+  foreach ($extraRecipients as $rid) {
+    $recipientIds[] = (int)$rid;
+  }
+
+  $recipientIds = array_values(array_unique(array_filter($recipientIds)));
+  foreach ($recipientIds as $rid) {
+    if (!$includeCurrent && $senderId !== null && $rid === $senderId) {
+      continue;
+    }
+    create_notification($db, $senderId, $rid, $type, $title, $message, $link);
+  }
+}
+
 /**
  * Productie beveiliging voor debug/demo endpoints.
  * Zet PP_ALLOW_DIAGNOSTICS=1 om lokaal toe te staan.

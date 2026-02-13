@@ -19,7 +19,8 @@ $requiredTables = [
   'sales_leads',
   'sales_appointments',
   'sales_planning_visits',
-  'audit_logs'
+  'audit_logs',
+  'notifications'
 ];
 
 $missing = [];
@@ -42,6 +43,7 @@ $buses = (int)$db->query("SELECT COUNT(*) FROM buses")->fetchColumn();
 $leads = (int)$db->query("SELECT COUNT(*) FROM sales_leads")->fetchColumn();
 $appointments = (int)$db->query("SELECT COUNT(*) FROM sales_appointments")->fetchColumn();
 $visits = (int)$db->query("SELECT COUNT(*) FROM sales_planning_visits")->fetchColumn();
+$notifications = (int)$db->query("SELECT COUNT(*) FROM notifications")->fetchColumn();
 
 echo "Schema OK\n";
 echo "Users: $users\n";
@@ -50,3 +52,4 @@ echo "Buses: $buses\n";
 echo "Leads: $leads\n";
 echo "Appointments: $appointments\n";
 echo "Planning visits: $visits\n";
+echo "Notifications: $notifications\n";

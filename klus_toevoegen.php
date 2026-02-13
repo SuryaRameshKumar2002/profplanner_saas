@@ -112,6 +112,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         WHERE id=?
       ");
       $stmt->execute(array_merge($payload, [$editId]));
+      $werknemerId = (int)($_POST['werknemer_id'] ?? 0);
+      if ($werknemerId > 0) {
+        notify_for_scope(
+          $db,
+          'job_updated',
+          'Klus bijgewerkt',
+          'Een planning is bijgewerkt: ' . ($_POST['titel'] ?? 'Klus'),
+          'rooster_detail.php?id=' . $editId,
+          ['recipient_ids' => [$werknemerId]]
+        );
+      }
     } else {
       $stmt = $db->prepare("
         INSERT INTO roosters (
@@ -122,6 +133,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       ");
       $stmt->execute($payload);
       $editId = (int)$db->lastInsertId();
+      $werknemerId = (int)($_POST['werknemer_id'] ?? 0);
+      if ($werknemerId > 0) {
+        notify_for_scope(
+          $db,
+          'job_created',
+          'Nieuwe klus toegewezen',
+          'Nieuwe klus: ' . ($_POST['titel'] ?? 'Klus') . ' op ' . $datum,
+          'rooster_detail.php?id=' . $editId,
+          ['recipient_ids' => [$werknemerId]]
+        );
+      }
     }
 
     header("Location: rooster_detail.php?id=" . $editId);

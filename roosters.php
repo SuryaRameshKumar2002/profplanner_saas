@@ -9,7 +9,7 @@ $werkgeverId = current_werkgever_id();
 
 if($user['rol']==='werknemer'){
   $stmt = $db->prepare("
-    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur
+    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur, b.image_path AS bus_image_path
     FROM roosters r
     LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
     LEFT JOIN users u ON u.id = r.werknemer_id
@@ -20,7 +20,7 @@ if($user['rol']==='werknemer'){
   $stmt->execute([$user['id']]);
 } elseif ($isSuper) {
   $stmt = $db->query("
-    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur, wg.naam AS werkgever_naam
+    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur, b.image_path AS bus_image_path, wg.naam AS werkgever_naam
     FROM roosters r
     LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
     LEFT JOIN users u ON u.id = r.werknemer_id
@@ -30,7 +30,7 @@ if($user['rol']==='werknemer'){
   ");
 } else {
   $stmt = $db->prepare("
-    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur
+    SELECT r.*, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, b.naam AS bus_naam, b.kleur AS bus_kleur, b.image_path AS bus_image_path
     FROM roosters r
     LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
     LEFT JOIN users u ON u.id = r.werknemer_id
@@ -74,7 +74,12 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <td><?= h($r['locatie'] ?? '') ?></td>
         <td>
           <?php if (!empty($r['bus_naam'])): ?>
-            <span class="badge" style="background:<?= h($r['bus_kleur'] ?? '#16a34a') ?>;color:#fff;"><?= h($r['bus_naam']) ?></span>
+            <span class="bus-chip">
+              <?php if (!empty($r['bus_image_path'])): ?>
+                <img src="<?= h($r['bus_image_path']) ?>" alt="<?= h($r['bus_naam']) ?>" class="bus-thumb">
+              <?php endif; ?>
+              <span class="badge" style="background:<?= h($r['bus_kleur'] ?? '#16a34a') ?>;color:#fff;"><?= h($r['bus_naam']) ?></span>
+            </span>
           <?php else: ?>
             <span class="muted">-</span>
           <?php endif; ?>
@@ -82,7 +87,10 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <td><?= h($r['werknemer_naam'] ?? '') ?></td>
         <?php if($isSuper): ?><td><?= h($r['werkgever_naam'] ?? '-') ?></td><?php endif; ?>
         <td><span class="<?= $badge ?>"><?= h($r['status'] ?? '') ?></span></td>
-        <td><a class="btn ghost" href="rooster_detail.php?id=<?= (int)$r['id'] ?>">Open</a></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a class="btn ghost" href="rooster_detail.php?id=<?= (int)$r['id'] ?>">Open</a>
+          <a class="btn ghost" href="share.php?type=job&id=<?= (int)$r['id'] ?>">Share</a>
+        </td>
       </tr>
       <?php endforeach; ?>
       <?php if(!$rows): ?>

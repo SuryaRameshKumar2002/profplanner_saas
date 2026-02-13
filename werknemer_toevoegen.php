@@ -37,8 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (int)$_SESSION['user']['id'],
                 ($telefoonnummer !== '' ? $telefoonnummer : null)
             ]);
+            $newUserId = (int)$db->lastInsertId();
+            notify_for_scope(
+                $db,
+                'employee_created',
+                'Nieuwe werknemer aangemaakt',
+                'Account voor ' . $naam . ' is aangemaakt.',
+                'werknemers_management.php',
+                ['recipient_ids' => [$newUserId]]
+            );
 
-            header('Location: werknemers_management.php');
+            header('Location: werknemers_management.php?created=' . $newUserId);
             exit;
         } catch (Throwable $e) {
             $error = 'Opslaan mislukt: ' . $e->getMessage();

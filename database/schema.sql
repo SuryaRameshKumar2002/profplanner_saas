@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS buses (
   naam VARCHAR(50) NOT NULL,
   omschrijving TEXT NULL,
   kleur VARCHAR(10) NOT NULL DEFAULT '#16a34a',
+  image_path VARCHAR(255) NULL,
   actief BOOLEAN NOT NULL DEFAULT TRUE,
   gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   gewijzigd_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -226,6 +227,24 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   INDEX idx_audit_actie (actie),
   CONSTRAINT fk_audit_actor FOREIGN KEY (actor_user_id) REFERENCES users(id)
     ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  sender_user_id INT NULL,
+  recipient_user_id INT NOT NULL,
+  type VARCHAR(50) NOT NULL DEFAULT 'general',
+  title VARCHAR(190) NOT NULL,
+  message TEXT NULL,
+  link VARCHAR(255) NULL,
+  gelezen_op DATETIME NULL,
+  gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_notifications_recipient (recipient_user_id),
+  INDEX idx_notifications_read (gelezen_op),
+  CONSTRAINT fk_notifications_sender FOREIGN KEY (sender_user_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_notifications_recipient FOREIGN KEY (recipient_user_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO rollen (id, naam) VALUES

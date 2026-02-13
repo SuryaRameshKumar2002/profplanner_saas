@@ -29,11 +29,15 @@ if ($isSuper) {
     $werknemers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
+<?php $createdId = (int)($_GET['created'] ?? 0); ?>
 
 <div class="card">
     <h2>Werknemers Beheer</h2>
     <p class="muted">Overzicht en beheer van alle werknemers</p>
 </div>
+<?php if ($createdId > 0): ?>
+    <div class="success">Werknemer aangemaakt. Je kunt nu direct via Share notificeren.</div>
+<?php endif; ?>
 
 <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -69,6 +73,7 @@ if ($isSuper) {
                         <td style="text-align:right;">
                             <?php if (!$isSuper): ?>
                                 <a href="werknemer_bewerk.php?id=<?= (int)$w['id'] ?>" class="btn ghost" style="padding:6px 8px;font-size:12px;margin:0;">Bewerk</a>
+                                <a href="share.php?type=employee&id=<?= (int)$w['id'] ?>" class="btn ghost" style="padding:6px 8px;font-size:12px;margin:0;">Share</a>
                             <?php endif; ?>
                         </td>
                     </tr>

@@ -44,6 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_sales_user']))
       try {
         $ins = $db->prepare("INSERT INTO users (naam, email, wachtwoord, rol_id, werkgever_id, telefoonnummer, actief) VALUES (?, ?, ?, ?, ?, ?, 1)");
         $ins->execute([$naam, $email, password_hash($wachtwoord, PASSWORD_DEFAULT), $roleId, $targetWerkgever, ($telefoon !== '' ? $telefoon : null)]);
+        $newSalesUserId = (int)$db->lastInsertId();
+        notify_for_scope(
+          $db,
+          'sales_user_created',
+          'Nieuwe sales gebruiker',
+          'Sales account voor ' . $naam . ' is aangemaakt.',
+          'sales_users_management.php',
+          ['werkgever_id' => $targetWerkgever, 'recipient_ids' => [$newSalesUserId]]
+        );
         $success = 'Sales gebruiker aangemaakt.';
       } catch (Throwable $e) {
         $error = 'Aanmaken mislukt: ' . $e->getMessage();
@@ -144,6 +153,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
               <input type="hidden" name="actief" value="<?= (int)$u['actief'] ? 0 : 1 ?>">
               <button class="btn ghost" type="submit" name="toggle_sales_user"><?= (int)$u['actief'] ? 'Deactiveer' : 'Activeer' ?></button>
             </form>
+            <a class="btn ghost" href="share.php?type=user&id=<?= (int)$u['id'] ?>">Share</a>
           </td>
         </tr>
       <?php endforeach; ?>

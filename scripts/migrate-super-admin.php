@@ -33,6 +33,9 @@ if (!col_exists($db, 'opdrachtgevers', 'werkgever_id')) {
 if (!col_exists($db, 'buses', 'werkgever_id')) {
   $db->exec("ALTER TABLE buses ADD COLUMN werkgever_id INT NULL AFTER id");
 }
+if (!col_exists($db, 'buses', 'image_path')) {
+  $db->exec("ALTER TABLE buses ADD COLUMN image_path VARCHAR(255) NULL AFTER kleur");
+}
 
 if (!table_exists($db, 'sales_leads')) {
   $db->exec("CREATE TABLE sales_leads (
@@ -127,6 +130,22 @@ if (!table_exists($db, 'audit_logs')) {
     doel_id INT NULL,
     metadata TEXT NULL,
     gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+if (!table_exists($db, 'notifications')) {
+  $db->exec("CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_user_id INT NULL,
+    recipient_user_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'general',
+    title VARCHAR(190) NOT NULL,
+    message TEXT NULL,
+    link VARCHAR(255) NULL,
+    gelezen_op DATETIME NULL,
+    gemaakt_op TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notifications_recipient (recipient_user_id),
+    INDEX idx_notifications_read (gelezen_op)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 

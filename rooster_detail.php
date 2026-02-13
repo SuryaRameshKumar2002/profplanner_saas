@@ -18,7 +18,8 @@ $stmt = $db->prepare("
          o.naam AS opdrachtgever_naam,
          u.naam AS werknemer_naam,
          b.naam AS bus_naam,
-         b.kleur AS bus_kleur
+         b.kleur AS bus_kleur,
+         b.image_path AS bus_image_path
   FROM roosters r
   LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
   LEFT JOIN users u ON u.id = r.werknemer_id
@@ -102,7 +103,7 @@ if (strlen($eindRaw)  >= 16 && strpos($eindRaw,  ' ') !== false) $eindTijd  = su
     <p><b>Opdrachtgever:</b> <?= h($r['opdrachtgever_naam'] ?? '') ?></p>
     <p><b>Werknemer:</b> <?= h($r['werknemer_naam'] ?? '') ?></p>
     <?php if (!empty($r['bus_naam'])): ?>
-      <p><b>Bus/Team:</b> <span class="badge" style="background:<?= h($r['bus_kleur'] ?? '#16a34a') ?>;color:#fff;"><?= h($r['bus_naam']) ?></span></p>
+      <p><b>Bus/Team:</b> <span class="bus-chip"><?php if (!empty($r['bus_image_path'])): ?><img src="<?= h($r['bus_image_path']) ?>" alt="<?= h($r['bus_naam']) ?>" class="bus-thumb"><?php endif; ?><span class="badge" style="background:<?= h($r['bus_kleur'] ?? '#16a34a') ?>;color:#fff;"><?= h($r['bus_naam']) ?></span></span></p>
     <?php endif; ?>
 
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0;">
@@ -119,6 +120,10 @@ if (strlen($eindRaw)  >= 16 && strpos($eindRaw,  ' ') !== false) $eindTijd  = su
       <p style="margin-top:12px;"><b>Extra werkzaamheden:</b></p>
       <div class="muted"><?= nl2br(h($r['extra_werkzaamheden'])) ?></div>
     <?php endif; ?>
+
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn ghost" href="share.php?type=job&id=<?= (int)$r['id'] ?>">Share</a>
+    </div>
 
     <?php if (($user['rol'] ?? '') === 'werkgever'): ?>
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">

@@ -30,7 +30,7 @@ $prev_monday->modify('-7 days');
 if ($user['rol'] === 'werknemer') {
     // Werknemer: alleen eigen klussen
     $stmt = $db->prepare("
-        SELECT r.*, b.naam AS bus_naam, b.kleur, o.naam AS opdrachtgever_naam
+        SELECT r.*, b.naam AS bus_naam, b.kleur, b.image_path, o.naam AS opdrachtgever_naam
         FROM roosters r
         LEFT JOIN buses b ON b.id = r.bus_id
         LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
@@ -43,7 +43,7 @@ if ($user['rol'] === 'werknemer') {
 } elseif ($isSuper) {
     // Super admin: alle werkgevers
     $stmt = $db->prepare("
-        SELECT r.*, b.naam AS bus_naam, b.kleur, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, wg.naam AS werkgever_naam
+        SELECT r.*, b.naam AS bus_naam, b.kleur, b.image_path, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam, wg.naam AS werkgever_naam
         FROM roosters r
         LEFT JOIN buses b ON b.id = r.bus_id
         LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
@@ -57,7 +57,7 @@ if ($user['rol'] === 'werknemer') {
 } else {
     // Werkgever: alle klussen voor deze week
     $stmt = $db->prepare("
-        SELECT r.*, b.naam AS bus_naam, b.kleur, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam
+        SELECT r.*, b.naam AS bus_naam, b.kleur, b.image_path, o.naam AS opdrachtgever_naam, u.naam AS werknemer_naam
         FROM roosters r
         LEFT JOIN buses b ON b.id = r.bus_id
         LEFT JOIN opdrachtgevers o ON o.id = r.opdrachtgever_id
@@ -116,7 +116,10 @@ foreach ($roosters as $rooster) {
 <?php foreach ($buses_planning as $bus_group): ?>
     <?php if (count($bus_group['roosters']) > 0 || $user['rol'] === 'werkgever'): ?>
     <div class="card" style="border-left:4px solid <?= h($bus_group['info']['kleur']) ?>;">
-        <h3 style="color:<?= h($bus_group['info']['kleur']) ?>;">
+        <h3 style="color:<?= h($bus_group['info']['kleur']) ?>;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <?php if (!empty($bus_group['info']['image_path'])): ?>
+                <img src="<?= h($bus_group['info']['image_path']) ?>" alt="<?= h($bus_group['info']['naam']) ?>" class="bus-thumb">
+            <?php endif; ?>
             Bus: <?= h($bus_group['info']['naam']) ?>
             <span class="badge" style="margin-left:8px;"><?= count($bus_group['roosters']) ?> klussen</span>
         </h3>

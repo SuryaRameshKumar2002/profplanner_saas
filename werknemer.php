@@ -70,8 +70,13 @@ $my_buses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <p class="muted">Teams waaraan je bent toegewezen</p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
       <?php foreach ($my_buses as $bus): ?>
-        <span class="badge" style="background:<?= h($bus['kleur']) ?>;color:#fff;padding:8px 12px;">
-          <?= h($bus['naam']) ?>
+        <span class="bus-chip">
+          <?php if (!empty($bus['image_path'])): ?>
+            <img src="<?= h($bus['image_path']) ?>" alt="<?= h($bus['naam']) ?>" class="bus-thumb">
+          <?php endif; ?>
+          <span class="badge" style="background:<?= h($bus['kleur']) ?>;color:#fff;padding:8px 12px;">
+            <?= h($bus['naam']) ?>
+          </span>
         </span>
       <?php endforeach; ?>
     </div>

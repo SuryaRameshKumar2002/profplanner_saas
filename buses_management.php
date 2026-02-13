@@ -7,6 +7,44 @@ $action = $_GET['action'] ?? '';
 $isSuper = is_super_admin();
 $werkgeverId = current_werkgever_id();
 
+function store_bus_image(array $file, string &$error = ''): ?string {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        $error = 'Bus image upload failed.';
+        return null;
+    }
+    if (($file['size'] ?? 0) > 5 * 1024 * 1024) {
+        $error = 'Bus image must be max 5MB.';
+        return null;
+    }
+
+    $tmp = $file['tmp_name'] ?? '';
+    $mime = @mime_content_type($tmp);
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+    if (!isset($allowed[$mime])) {
+        $error = 'Only JPG, PNG or WEBP images are allowed.';
+        return null;
+    }
+
+    $dir = __DIR__ . '/uploads/buses';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    $name = 'bus_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+    $target = $dir . '/' . $name;
+    if (!@move_uploaded_file($tmp, $target)) {
+        $error = 'Could not save bus image.';
+        return null;
+    }
+    return 'uploads/buses/' . $name;
+}
+
 if ($isSuper) {
     $stmt = $db->query("SELECT b.*, w.naam AS werkgever_naam FROM buses b LEFT JOIN users w ON w.id = b.werkgever_id ORDER BY b.naam ASC");
     $buses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -34,14 +72,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_bus'])) {
     $naam = trim($_POST['naam'] ?? '');
     $omschrijving = trim($_POST['omschrijving'] ?? '');
     $kleur = $_POST['kleur'] ?? '#16a34a';
+    $uploadError = '';
+    $imagePath = store_bus_image($_FILES['image'] ?? [], $uploadError);
     
     if (empty($naam)) {
         $error = "Bus naam is verplicht";
+    } elseif (!empty($uploadError)) {
+        $error = $uploadError;
     } else {
         try {
-            $stmt = $db->prepare("INSERT INTO buses (werkgever_id, naam, omschrijving, kleur) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$werkgeverId, $naam, $omschrijving, $kleur]);
+            $stmt = $db->prepare("INSERT INTO buses (werkgever_id, naam, omschrijving, kleur, image_path) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$werkgeverId, $naam, $omschrijving, $kleur, $imagePath]);
             $success = "Bus '{$naam}' toegevoegd";
+            notify_for_scope($db, 'bus_created', "Nieuwe bus: {$naam}", 'Een nieuwe bus/team is toegevoegd.', 'buses_management.php');
             header("Refresh:1");
         } catch (Exception $e) {
             $error = "Fout bij toevoegen: " . $e->getMessage();
@@ -83,6 +126,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_workers'])) {
         $success = "Werknemers aan bus toegewezen";
         header("Refresh:1");
     } catch (Exception $e) {
+        $error = "Fout: " . $e->getMessage();
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_bus_image'])) {
+    $bus_id = (int)($_POST['bus_id'] ?? 0);
+    try {
+        if (!$isSuper) {
+            $chk = $db->prepare("SELECT id FROM buses WHERE id = ? AND werkgever_id = ?");
+            $chk->execute([$bus_id, $werkgeverId]);
+            if (!$chk->fetchColumn()) {
+                throw new RuntimeException("Geen toegang tot deze bus.");
+            }
+        }
+        $uploadError = '';
+        $imagePath = store_bus_image($_FILES['new_image'] ?? [], $uploadError);
+        if (!$imagePath) {
+            throw new RuntimeException($uploadError ?: 'Selecteer een afbeelding.');
+        }
+        $stmt = $db->prepare("UPDATE buses SET image_path = ? WHERE id = ?");
+        $stmt->execute([$imagePath, $bus_id]);
+        $success = "Bus afbeelding bijgewerkt.";
+        header("Refresh:1");
+    } catch (Throwable $e) {
         $error = "Fout: " . $e->getMessage();
     }
 }
@@ -135,7 +202,7 @@ if (!empty($action) && $action === 'assign') {
 <?php if (!$isSuper): ?>
 <div class="card">
     <h3>+ Nieuwe Bus Toevoegen</h3>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <label>Bus Naam (bijv. HV01, HV02)</label>
         <input type="text" name="naam" placeholder="HV01" required>
         
@@ -144,6 +211,9 @@ if (!empty($action) && $action === 'assign') {
         
         <label>Kleur (voor planning)</label>
         <input type="color" name="kleur" value="#16a34a">
+
+        <label>Bus afbeelding (optioneel)</label>
+        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/*">
         
         <button type="submit" name="add_bus" class="btn">Toevoegen</button>
     </form>
@@ -160,6 +230,11 @@ if (!empty($action) && $action === 'assign') {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px;">
             <?php foreach ($buses as $bus): ?>
                 <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#fff;">
+                    <div class="bus-media">
+                        <?php if (!empty($bus['image_path'])): ?>
+                            <img src="<?= h($bus['image_path']) ?>" alt="<?= h($bus['naam']) ?>">
+                        <?php endif; ?>
+                    </div>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <div style="width:20px;height:20px;background:<?= h($bus['kleur']) ?>;border-radius:4px;"></div>
                         <h4 style="margin:0;font-size:16px;"><?= h($bus['naam']) ?></h4>
@@ -194,13 +269,19 @@ if (!empty($action) && $action === 'assign') {
                         </div>
                     </div>
                     
-                    <div style="display:flex;gap:8px;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <a href="buses_management.php?action=assign&bus_id=<?= (int)$bus['id'] ?>" class="btn ghost" style="flex:1;text-align:center;margin:0;padding:8px 12px;font-size:13px;">Werknemers</a>
+                        <a href="share.php?type=bus&id=<?= (int)$bus['id'] ?>" class="btn ghost" style="flex:1;text-align:center;margin:0;padding:8px 12px;font-size:13px;">Share</a>
                         <form method="post" style="flex:1;margin:0;">
                             <input type="hidden" name="bus_id" value="<?= (int)$bus['id'] ?>">
                             <button type="submit" name="delete_bus" class="btn ghost" style="width:100%;margin:0;padding:8px 12px;font-size:13px;background:#fee2e2;color:#991b1b;" onclick="return confirm('Verwijder bus?')">Verwijderen</button>
                         </form>
                     </div>
+                    <form method="post" enctype="multipart/form-data" style="margin-top:8px;">
+                        <input type="hidden" name="bus_id" value="<?= (int)$bus['id'] ?>">
+                        <input type="file" name="new_image" accept=".jpg,.jpeg,.png,.webp,image/*">
+                        <button type="submit" name="update_bus_image" class="btn subtle" style="margin-top:4px;">Update image</button>
+                    </form>
                 </div>
             <?php endforeach; ?>
         </div>

@@ -31,7 +31,7 @@ If your XAMPP Apache uses port 8080, use:
 - Werkgever: `werkgever@test.nl` / `password123`
 - Werknemer: `werknemer@test.nl` / `password123`
 - Sales Manager: `salesmanager@test.nl` / `password123`
-- Sales Medewerker: `sales@test.nl` / `password123`
+- Sales Medewerker: `` / `password123`
 
 ## 3. Smoke test (optional)
 
@@ -70,6 +70,10 @@ If script is blocked, import in phpMyAdmin:
 6. Login as werknemer and open `Mijn Roosters`.
 7. Open job, update status, upload photo.
 8. Login as werkgever and verify status/upload in detail page.
+9. Use `Share` on jobs/users/buses to send internal notifications.
+10. Open `Notifications` to verify unread updates and mark as read.
+11. Open `Calendar` from header and verify monthly live-updating planner view.
+12. If styles look old, force refresh browser cache once (`Ctrl+F5`).
 
 ## 6. Hostinger single-domain deploy
 
