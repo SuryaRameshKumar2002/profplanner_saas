@@ -20,7 +20,8 @@ $requiredTables = [
   'sales_appointments',
   'sales_planning_visits',
   'audit_logs',
-  'notifications'
+  'notifications',
+  'login_attempts'
 ];
 
 $missing = [];

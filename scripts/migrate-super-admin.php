@@ -20,6 +20,8 @@ function table_exists(PDO $db, string $table): bool {
 
 $db->exec("INSERT INTO rollen (id, naam) VALUES (3, 'super_admin'), (4, 'sales_manager'), (5, 'sales_agent') ON DUPLICATE KEY UPDATE naam=VALUES(naam)");
 
+$db->exec("INSERT INTO rollen (id, naam) VALUES (1, 'werkgever'), (2, 'werknemer') ON DUPLICATE KEY UPDATE naam=VALUES(naam)");
+
 if (!col_exists($db, 'users', 'werkgever_id')) {
   $db->exec("ALTER TABLE users ADD COLUMN werkgever_id INT NULL AFTER rol_id");
 }
@@ -149,14 +151,35 @@ if (!table_exists($db, 'notifications')) {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
-$superHash = password_hash('password123', PASSWORD_DEFAULT);
+if (!table_exists($db, 'login_attempts')) {
+  $db->exec("CREATE TABLE login_attempts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(190) NOT NULL,
+    ip VARCHAR(45) NOT NULL,
+    success BOOLEAN NOT NULL DEFAULT FALSE,
+    attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_login_attempts_email_ip_time (email, ip, attempted_at),
+    INDEX idx_login_attempts_time (attempted_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+$superHash = password_hash('Pp!Sup3rAdm1n#2026', PASSWORD_DEFAULT);
 $roleId = (int)$db->query("SELECT id FROM rollen WHERE naam='super_admin' LIMIT 1")->fetchColumn();
-$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,actief) VALUES ('Super Admin','admin@profplanner.local',?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), actief=1");
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,actief) VALUES ('Super Admin','superadmin@profplanner.app',?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), actief=1");
 $stmt->execute([$superHash, $roleId]);
 
 $werkgeverRole = (int)$db->query("SELECT id FROM rollen WHERE naam='werkgever' LIMIT 1")->fetchColumn();
 $werknemerRole = (int)$db->query("SELECT id FROM rollen WHERE naam='werknemer' LIMIT 1")->fetchColumn();
-$defaultWerkgeverId = (int)$db->query("SELECT id FROM users WHERE rol_id = {$werkgeverRole} ORDER BY id LIMIT 1")->fetchColumn();
+
+$employerHash = password_hash('Pp!Werkg3ver#2026', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,actief) VALUES ('Employer Account','werkgever@profplanner.app',?,?,1) ON DUPLICATE KEY UPDATE naam=VALUES(naam), wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), actief=1");
+$stmt->execute([$employerHash, $werkgeverRole]);
+
+$defaultWerkgeverId = (int)$db->query("SELECT id FROM users WHERE email = 'werkgever@profplanner.app' LIMIT 1")->fetchColumn();
+
+$employeeHash = password_hash('Pp!Werkn3mer#2026', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Employee Account','werknemer@profplanner.app',?,?,?,1) ON DUPLICATE KEY UPDATE naam=VALUES(naam), wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
+$stmt->execute([$employeeHash, $werknemerRole, ($defaultWerkgeverId > 0 ? $defaultWerkgeverId : null)]);
+
 if ($defaultWerkgeverId > 0) {
   $db->exec("UPDATE users SET werkgever_id = {$defaultWerkgeverId} WHERE rol_id = {$werknemerRole} AND (werkgever_id IS NULL OR werkgever_id = 0)");
 }
@@ -164,12 +187,12 @@ if ($defaultWerkgeverId > 0) {
 $salesManagerRole = (int)$db->query("SELECT id FROM rollen WHERE naam='sales_manager' LIMIT 1")->fetchColumn();
 $salesAgentRole = (int)$db->query("SELECT id FROM rollen WHERE naam='sales_agent' LIMIT 1")->fetchColumn();
 
-$salesManagerHash = password_hash('password123', PASSWORD_DEFAULT);
-$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Sales Manager Test','salesmanager@test.nl',?,?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
+$salesManagerHash = password_hash('Pp!SalesMng#2026', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Sales Manager','salesmanager@profplanner.app',?,?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
 $stmt->execute([$salesManagerHash, $salesManagerRole, ($defaultWerkgeverId > 0 ? $defaultWerkgeverId : null)]);
 
-$salesAgentHash = password_hash('password123', PASSWORD_DEFAULT);
-$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Sales Medewerker Test','sales@test.nl',?,?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
+$salesAgentHash = password_hash('Pp!SalesAg3nt#2026', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO users (naam,email,wachtwoord,rol_id,werkgever_id,actief) VALUES ('Sales Agent','salesagent@profplanner.app',?,?,?,1) ON DUPLICATE KEY UPDATE wachtwoord=VALUES(wachtwoord), rol_id=VALUES(rol_id), werkgever_id=VALUES(werkgever_id), actief=1");
 $stmt->execute([$salesAgentHash, $salesAgentRole, ($defaultWerkgeverId > 0 ? $defaultWerkgeverId : null)]);
 
 echo "Super admin migration complete\n";

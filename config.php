@@ -1,18 +1,36 @@
 <?php
 ini_set('session.use_strict_mode', '1');
+
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+  || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443);
+session_set_cookie_params([
+  'lifetime' => 0,
+  'path' => '/',
+  'domain' => '',
+  'secure' => $isHttps,
+  'httponly' => true,
+  'samesite' => 'Lax',
+]);
 session_start();
+
+if (php_sapi_name() !== 'cli') {
+  header('X-Frame-Options: SAMEORIGIN');
+  header('X-Content-Type-Options: nosniff');
+  header('Referrer-Policy: strict-origin-when-cross-origin');
+  header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+}
 
 /**
  * Database connectie.
  * Via omgevingsvariabelen aanpasbaar voor productie/hosting:
  * PP_DB_HOST, PP_DB_NAME, PP_DB_USER, PP_DB_PASS
  */
-$dbHost = getenv('PP_DB_HOST') ?: '127.0.0.1';
-$dbName = getenv('PP_DB_NAME') ?: 'profplanner';
-$dbUser = getenv('PP_DB_USER') ?: 'root';
+$dbHost = getenv('PP_DB_HOST') ?: 'localhost';
+$dbName = getenv('PP_DB_NAME') ?: 'u909097003_profsolutions';
+$dbUser = getenv('PP_DB_USER') ?: 'u909097003_prof_admin';
 $dbPass = getenv('PP_DB_PASS');
 if ($dbPass === false) {
-  $dbPass = '';
+  $dbPass = 'Profsolutions@123';
 }
 
 $db = new PDO(
@@ -21,6 +39,42 @@ $db = new PDO(
   $dbPass
 );
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+function csrf_token(): string {
+  if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+  }
+  return (string)$_SESSION['csrf_token'];
+}
+
+function csrf_validate(?string $token): bool {
+  $sessionToken = (string)($_SESSION['csrf_token'] ?? '');
+  $incoming = (string)($token ?? '');
+  if ($sessionToken === '' || $incoming === '') {
+    return false;
+  }
+  return hash_equals($sessionToken, $incoming);
+}
+
+function csrf_input(): string {
+  return '<input type="hidden" name="csrf_token" value="' . h(csrf_token()) . '">';
+}
+
+if (php_sapi_name() !== 'cli' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+  $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
+  $incomingToken = null;
+  if (stripos($contentType, 'application/json') !== false) {
+    $incomingToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+  } else {
+    $incomingToken = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
+  }
+
+  if (!csrf_validate($incomingToken)) {
+    http_response_code(419);
+    echo "Security token invalid or expired. Refresh the page and try again.";
+    exit;
+  }
+}
 
 /**
  * Login verplicht

@@ -27,11 +27,11 @@ If your XAMPP Apache uses port 8080, use:
 
 ## 2. Test login
 
-- Super Admin: `admin@profplanner.local` / `password123`
-- Werkgever: `werkgever@test.nl` / `password123`
-- Werknemer: `werknemer@test.nl` / `password123`
-- Sales Manager: `salesmanager@test.nl` / `password123`
-- Sales Medewerker: `` / `password123`
+- Super Admin: `superadmin@profplanner.app` / `Pp!Sup3rAdm1n#2026`
+- Werkgever: `werkgever@profplanner.app` / `Pp!Werkg3ver#2026`
+- Werknemer: `werknemer@profplanner.app` / `Pp!Werkn3mer#2026`
+- Sales Manager: `salesmanager@profplanner.app` / `Pp!SalesMng#2026`
+- Sales Agent: `salesagent@profplanner.app` / `Pp!SalesAg3nt#2026`
 
 ## 3. Smoke test (optional)
 
@@ -81,19 +81,19 @@ If script is blocked, import in phpMyAdmin:
 2. In Hostinger hPanel, create MySQL DB + user.
 3. Upload files via File Manager/FTP.
 4. In phpMyAdmin (Hostinger), import:
-   - `database/schema.sql`
-   - `database/seed_demo.sql` (optional)
+   - `database/install_hostinger.sql` (single-file import, recommended)
+   - or `database/schema.sql` + `database/seed_demo.sql` separately
 5. Set DB env vars in Hostinger PHP settings or `.htaccess`:
    - `PP_DB_HOST`
    - `PP_DB_NAME`
    - `PP_DB_USER`
    - `PP_DB_PASS`
 6. Ensure `uploads/` exists and is writable.
-7. Open your domain and test both logins.
+7. Open your domain and test all role logins.
 
 ## 7. Production checklist
 
 - Keep `PP_ALLOW_DIAGNOSTICS` unset in production (blocks diagnostic/reset endpoints).
-- Replace demo users with real users.
+- Rotate seeded passwords after first login and create organization-specific users.
 - Enforce HTTPS on domain.
 - Keep database backups enabled in Hostinger.

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ProfPlanner - Planning & Klusbeheer</title>
+<meta name="csrf-token" content="<?= h(csrf_token()) ?>">
 <link rel="stylesheet" href="assets/style.css?v=<?= @filemtime(__DIR__ . '/../assets/style.css') ?: time() ?>">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>

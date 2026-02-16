@@ -52,7 +52,7 @@ if (($user['rol'] ?? '') === 'werknemer') {
  */
 $uploadDir = __DIR__ . "/uploads";
 if (!is_dir($uploadDir)) {
-  mkdir($uploadDir, 0777, true);
+  mkdir($uploadDir, 0755, true);
 }
 
 /**
@@ -108,23 +108,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_FILES['bestand']['error']) || $_FILES['bestand']['error'] !== UPLOAD_ERR_OK) {
       $error = "Upload fout. Probeer opnieuw.";
     } else {
+      $fileSize = (int)($_FILES['bestand']['size'] ?? 0);
+      if ($fileSize <= 0 || $fileSize > (8 * 1024 * 1024)) {
+        $error = "Bestand moet tussen 1 byte en 8MB zijn.";
+      }
+    }
 
+    if ($error === '') {
+      if (!is_uploaded_file($_FILES['bestand']['tmp_name'])) {
+        $error = "Ongeldige uploadbron.";
+      }
+    }
+
+    if ($error === '') {
       // Alleen afbeeldingen toestaan
       $finfo = finfo_open(FILEINFO_MIME_TYPE);
       $mime  = finfo_file($finfo, $_FILES['bestand']['tmp_name']);
       finfo_close($finfo);
 
-      $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-      if (!in_array($mime, $allowed, true)) {
+      $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+      ];
+      if (!isset($allowed[$mime])) {
         $error = "Alleen afbeeldingen zijn toegestaan (jpg/png/webp/gif).";
       } else {
 
-        // Veilige bestandsnaam
-        $orig = basename($_FILES['bestand']['name']);
-        $safe = preg_replace('/[^a-zA-Z0-9._-]/', '_', $orig);
-
-        // Unieke naam
-        $name = time() . "_" . $safe;
+        // Veilige unieke bestandsnaam op basis van MIME
+        $name = 'upload_' . date('Ymd_His') . '_' . bin2hex(random_bytes(5)) . '.' . $allowed[$mime];
         $target = $uploadDir . "/" . $name;
 
         if (!move_uploaded_file($_FILES['bestand']['tmp_name'], $target)) {

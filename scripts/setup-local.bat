@@ -31,9 +31,9 @@ echo.
 echo Setup complete.
 echo Open: http://localhost:8080/profplanner_CLIENT_JOBS/
 echo Login:
-echo   admin@profplanner.local / password123
-echo   werkgever@test.nl / password123
-echo   werknemer@test.nl / password123
-echo   salesmanager@test.nl / password123
-echo   sales@test.nl / password123
+echo   superadmin@profplanner.app / Pp!Sup3rAdm1n#2026
+echo   werkgever@profplanner.app / Pp!Werkg3ver#2026
+echo   werknemer@profplanner.app / Pp!Werkn3mer#2026
+echo   salesmanager@profplanner.app / Pp!SalesMng#2026
+echo   salesagent@profplanner.app / Pp!SalesAg3nt#2026
 endlocal

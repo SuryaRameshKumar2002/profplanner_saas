@@ -27,6 +27,33 @@
     if (window.innerWidth > 768) closeMenu();
   });
 })();
+
+(() => {
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  if (!token) return;
+
+  document.querySelectorAll('form[method="post"], form[method="POST"]').forEach((form) => {
+    if (!form.querySelector('input[name="csrf_token"]')) {
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'csrf_token';
+      hidden.value = token;
+      form.appendChild(hidden);
+    }
+  });
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const options = { ...init };
+    const headers = new Headers(options.headers || {});
+    const method = (options.method || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') {
+      headers.set('X-CSRF-Token', token);
+    }
+    options.headers = headers;
+    return originalFetch(input, options);
+  };
+})();
 </script>
 </body>
 </html>

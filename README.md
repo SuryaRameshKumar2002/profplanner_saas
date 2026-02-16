@@ -34,13 +34,15 @@ ProfPlanner is a PHP + MySQL portal for sales-confirmed job planning and executi
 
 Follow `QUICK_START.md`.
 
-## Default demo accounts
+## Default seeded accounts
 
-- `admin@profplanner.local` / `password123`
-- `werkgever@test.nl` / `password123`
-- `werknemer@test.nl` / `password123`
-- `salesmanager@test.nl` / `password123`
-- `sales@test.nl` / `password123`
+- `superadmin@profplanner.app` / `Pp!Sup3rAdm1n#2026`
+- `werkgever@profplanner.app` / `Pp!Werkg3ver#2026`
+- `werknemer@profplanner.app` / `Pp!Werkn3mer#2026`
+- `salesmanager@profplanner.app` / `Pp!SalesMng#2026`
+- `salesagent@profplanner.app` / `Pp!SalesAg3nt#2026`
+
+Rotate seeded credentials after first deployment.
 
 ## Environment variables
 
